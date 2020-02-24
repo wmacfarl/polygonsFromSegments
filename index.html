@@ -43,6 +43,20 @@
                     (in the findMinimumCycles() function), along with some attempts to fix the problem and an untested idea.  
                 </li>
             </ul>
+          <h3>Code</h3>
+          <ul>
+            <li>Repository: https://github.com/wmacfarl/polygonsFromSegments</li>
+            <li>index.html + sketch.js:  demonstration page for interactive construction of segments+polygons</li>
+            <li>polygonFinder.js: contains functions for finding polygons.  depends on lineSegement.js, point.js, intersection.js, and graph.js</li>
+            <li>lineSegment.js, point.js, intersection.js: Geometry classes with some basic utility functions.</li>
+            <li>graph.js: Class for creating and analyzing graphs -- contains depth-first-search, shortest path code, etc</li>
+          </ul>
+          
+           <p>In general, I think that polygonFinder.js should have all *geometric* data -- everything referencing coordinates, points, or lines.  graph.js should 
+             care only about nodes and connections.  *This is not currently true.*</p>
+            <p>At the moment graph.js nodes are associated with points and these associations are used to
+            help us build the graph.  This could probably be generalized into just being an association with a generic ID-object instead of a 
+            point which would let us use the code in non-geometric domains.</p>
         </div>
       </div>
     
