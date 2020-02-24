@@ -5,7 +5,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.10.2/addons/p5.sound.min.js"></script>
     <link rel="stylesheet" type="text/css" href="style.css">
     <meta charset="utf-8" />
-
+    <title>Polygons from Line Segments</title>
   </head>
   <body>
     <script src="point.js"></script>
@@ -13,5 +13,37 @@
     <script src="intersection.js"></script>
     <script src="graph.js"></script>
     <script src="sketch.js"></script>
+    <div class="row">
+        <div class="column" id = 'canvas-holder'>
+            
+        </div>
+        <div class="column">
+            <h3>Polygons from Line Segments</h3>
+                <p>This is a demonstration/test of a technique for taking a set of line segments and finding all of the polygons that
+    the intersections generate.  Click on the canvas to add line segments.  The drawing is done using p5.js.The summary of the algorithm is:</p>
+                    <h3>The algorithm</h3>
+            <ul>
+                <li>Find all intersections between line segments</li>
+                <li>From the set of intersections, identify a nearest neighbor in each direction</li>
+                <li>Generate a graph where each node is an intersection-point with a connection to that intersection-point's nearest neighbors
+                <li>Use a depth-first search to find the shortest paths from each node back to itself without backtracking.  These
+                    paths should make up the minimal cycles in the graph which correspond to the polygons made by the line segments.
+                </li>
+            </ul>
+            <h3>Problems/Limitations</h3>
+            <ul>
+                <li>We are treating each intersection-point as unique.  If your system has more than two lines intersecting
+                    on the same point, part of this process might not work.  If it doesn't, it shouldn't be too hard to allow
+                    for overlapping intersection points in the geometry layer but still treat them as separate nodes in the graph
+                    layer.  I think this should be fine but I haven't thought hard about it.
+                </li>
+                <li>
+                    Our technique misses some polygons.  This is explained in slightly-more-detail in a comment in graph.js 
+                    (in the findMinimumCycles() function), along with some attempts to fix the problem and an untested idea.  
+                </li>
+            </ul>
+        </div>
+      </div>
+    
   </body>
 </html>

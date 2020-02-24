@@ -1,113 +1,63 @@
 var currentWorkingSegment = {};
-var allSegments = new Set();
-var intersections = new Set();
+var allSegments = [];
+var intersectionsToDraw = new Set();
 var myGraph = {};
 var myPolygons = [];
 
-
-
-
-
-
-
-
-
-
-
-
-function wiggleSegments(){
-  allSegments.forEach (segment => {
-    segment.point1.x+=random(-.01, .01);
-    segment.point1.y+=random(-.01, .01);
-    segment.point2.x+=random(-.01, .01);
-    segment.point2.y+=random(-.01, .01);});
-}
-
 function setup() {
-  createCanvas(400, 400);
-
-  addSegment(new LineSegment(new Point(45, 50),new Point(355, 50)));
-  addSegment(new LineSegment(new Point(45, 350),new Point(355, 350)));
-  addSegment(new LineSegment(new Point(50, 45),new Point(50, 355)));
-  addSegment(new LineSegment(new Point(350, 45),new Point(350, 355)));
-  //wiggleSegments();
-  myGraph = buildGraph(allSegments, intersections);
+  var canvas = createCanvas(600, 600)
+  canvas.parent('canvas-holder');
+  myGraph = buildGraph(allSegments);
 }
+
+function drawIntersection(intersection){
+    if (intersection.point.x){
+        ellipse(intersection.point.x, intersection.point.y, 5, 5);
+    }
+}
+
+function drawCurrentWorkingSegment(){
+    if (currentWorkingSegment.point1 && !currentWorkingSegment.point2) {
+        stroke(0);
+        line(currentWorkingSegment.point1.x, currentWorkingSegment.point1.y, mouseX, mouseY);
+      }    
+}
+
+function drawNodeLabels(){
+    if (myGraph.nodes){
+        for (let i = 0; i < myGraph.nodes.length; i++){
+          text(i, myGraph.nodes[i].point.x, myGraph.nodes[i].point.y);
+        }
+      }
+}
+
+function drawPolygons(){
+    myPolygons.forEach(polygon => { drawPolygon(polygon)});
+}
+
+function drawPolygon(polygon){
+    for (let i = 0; i < polygon.length; i++){     
+        if (!polygon[i].x || !polygon[i].y){
+            return;
+        }       
+    }
+
+    stroke(0,255,0);
+    strokeWeight(3);
+    fill(polygon.color);
+    beginShape();
+    for (let i = 0; i < polygon.length; i++){            
+        vertex(polygon[i].x, polygon[i].y);
+    }
+    endShape();
+}
+
 
 function draw() {
-  background(220);
+  background(210);
+  drawPolygons();
   allSegments.forEach(segment => drawSegment(segment));
-
-  stroke(0, 255, 0);
-  intersections.forEach(intersection => ellipse(intersection.point.x, intersection.point.y, 5, 5));
-
-  if (currentWorkingSegment.point1 && !currentWorkingSegment.point2) {
-    stroke(0);
-    line(currentWorkingSegment.point1.x, currentWorkingSegment.point1.y, mouseX, mouseY);
-  }
-  
-  if (myGraph.nodes){
-    for (let i = 0; i < myGraph.nodes.length; i++){
-      text(i, myGraph.nodes[i].point.x, myGraph.nodes[i].point.y);
-      
-    }
-  }
-  
-  myPolygons.forEach(polygon => {
-    for (let i = 1; i < polygon.length; i++){
-      stroke(random(255), random(255), random(255));
-      console.log(polygon[i-1].x);
-      line(polygon[i-1].x, polygon[i-1].y, polygon[i].x, polygon[i].y);
-    }
-  });
-  
-
-  
-}
-
-function findPath(graph, nodeIndex1, nodeIndex2) {
-  if (nodeIndex1 != nodeIndex2) {
-    
-    let path = [];
-    let previousNode = graph.nodes[nodeIndex1];
-    let currentNode = graph.nodes[nodeIndex1];
-    let targetNode  = graph.nodes[nodeIndex2];
-    let count = 0;
-    
-    stroke(255, 0, 0);
-    if (graph.isConnected(graph.nodes[nodeIndex1], graph.nodes[nodeIndex2])) {
-      stroke(0, 0, 255);
-    }
-    line(graph.nodes[nodeIndex1].point.x, graph.nodes[nodeIndex1].point.y,
-      graph.nodes[nodeIndex2].point.x, graph.nodes[nodeIndex2].point.y);
-  
-    let distancesToNodes = {};
-  
-    graph.nodes.forEach(node => {
-    if (node !== startNode) {
-      times[node] = Infinity
-    }  
-  });
-    
-    
-    
-    while (graph.isConnected(currentNode, targetNode) === false && count < 100){
-      count++;
-//      console.log(count);
-      let nextNode = graph.getNeighboringNodes(currentNode)[0];
-   
-      if (currentNode === nextNode){
-        console.log("BAD");
-      }
-
-      previousNode = currentNode;
-      currentNode = nextNode;
-      strokeWeight(3);
-      stroke(0,255,0);
-      line(previousNode.point.x, previousNode.point.y, currentNode.point.x, currentNode.point.y);
-    }
-  }
-    
+  drawCurrentWorkingSegment();  
 }
 
 function drawSegment(segment) {
@@ -117,8 +67,7 @@ function drawSegment(segment) {
 }
 
 function addSegment(segment) {
-  allSegments.add(segment);
-  findNewIntersections(segment, allSegments);
+  allSegments.push(segment);
 }
 
 function mousePressed() {
@@ -132,10 +81,12 @@ function mousePressed() {
       x: mouseX,
       y: mouseY
     };
-    addSegment(currentWorkingSegment);
+
+    addSegment(new LineSegment(currentWorkingSegment.point1, currentWorkingSegment.point2));;
     currentWorkingSegment = {};
-    myGraph = buildGraph(allSegments, intersections);
-    let allCycles = findAllCycles(myGraph.adjacencyList);
+
+    myGraph = buildGraph(allSegments, intersectionsToDraw);
+    let allCycles = myGraph.findMinimumCycles();
     myPolygons = polygonsFromCycles(allCycles);
   }
 }
@@ -143,91 +94,70 @@ function mousePressed() {
 function polygonsFromCycles(cycles){
   let polygons = [];
   cycles.forEach(cycle => {
-    let points = cycle.map(node => {return myGraph.nodes[node].point});
+    let points = cycle.map(node => 
+        {
+        return myGraph.nodes[node].point});
+    points.color=color(random(255),random(255),random(255));
     polygons.push(points);
   });
   return polygons;
 }
 
-function findNewIntersections(newSegment, existingSegmentSet) {
-  existingSegmentSet.forEach(oldSegment => {
-    let intersectionPoint = findIntersection(newSegment, oldSegment);
-    if (intersectionPoint) {
-      let intersection = new Intersection(newSegment, oldSegment, intersectionPoint);
-      intersections.add(intersection);
-    }
-  });
-}
-
-function keyPressed() {
-  console.log("here");  
-}
-
-function findIntersection(line1, line2) {
-  let denominator, a, b, numerator1, numerator2;
-  let result = {};
-
-  //https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
-
-  denominator = ((line2.point2.y - line2.point1.y) * (line1.point2.x - line1.point1.x)) - ((line2.point2.x - line2.point1.x) * (line1.point2.y - line1.point1.y));
-
-  if (denominator == 0) {
-    return null;
-  }
-
-  a = line1.point1.y - line2.point1.y;
-  b = line1.point1.x - line2.point1.x;
-
-  numerator1 = ((line2.point2.x - line2.point1.x) * a) - ((line2.point2.y - line2.point1.y) * b);
-  numerator2 = ((line1.point2.x - line1.point1.x) * a) - ((line1.point2.y - line1.point1.y) * b);
-
-  a = numerator1 / denominator;
-  b = numerator2 / denominator;
-
-  // if we cast these lines infinitely in both directions, they intersect here:
-  result.x = line1.point1.x + (a * (line1.point2.x - line1.point1.x));
-  result.y = line1.point1.y + (a * (line1.point2.y - line1.point1.y));
-
-  // if line1 is a segment and line2 is infinite, they intersect if:
-  if (a > 0 && a < 1 && b > 0 && b < 1) {
-    return result;
-  } else {
-    return null;
-  }
-}
-
-function buildGraph(segmentSet, intersectionSet) {
-  let graph = new Graph();
-
-  //Before we build the graph, throw away any lines that only have 1 intersection
-  segmentSet.forEach(segment => {
-    let intersectionsOnSegment = Array.from(intersectionSet).filter(intersection => intersection.line1 === segment || intersection.line2 === segment);
-    if (intersectionsOnSegment.length <= 1){
-      segmentSet.delete(segment);
-      intersectionSet.forEach(intersection => {
-        if (intersection.line1 === segment || intersection.line2 === segment){
-          intersectionSet.delete(intersection);
+function findAllIntersectionsInSegments(segmentSet){
+    let intersections = [];
+    for (let i = 0; i < segmentSet.length; i++){
+        for (let j = i+1; j < segmentSet.length; j++){
+            intersection = Intersection.findIntersection(segmentSet[i], segmentSet[j]);
+            if (intersection !== null){
+                let alreadyInSet = false;
+                for (let k = 0; k < intersections.length; k++){
+                    if (Intersection.equals(intersections[k], intersection)){
+                        alreadyInSet = true;
+                    }
+                }
+                if (!alreadyInSet){
+                    intersections.push(intersection);
+                }
+            }
         }
-      });
     }
-  });
-  
-  //For each line, find all intersections on that line
-  segmentSet.forEach(segment => {
-    let intersectionsOnSegment = Array.from(intersectionSet).filter(intersection => intersection.line1 === segment || intersection.line2 === segment);
+    return intersections;
+}
 
-    if (intersectionsOnSegment.length > 1){
-    //For each intersection on a line, find the nearest neighbor
-    let nearestNeighborTrios = intersectionsOnSegment.map((intersection, index, allIntersections) => {
-      let nearestNeighbor1 = null;
-      let nearestNeighbor2 = null;
-      let minimumDistance1 = null;
-      let minimumDistance2 = null;
-      let possibleNeighbors = allIntersections;
+function buildGraph(segments) {
+    let graph = new Graph(); 
+
+    //First we find all of the intersections between all of the segments
+    let intersections = findAllIntersectionsInSegments(segments);
+
+    //Then we filter for the segments that have more than one intersection
+    let connectedSegments = [];
+    let connectedIntersections = [];
+    segments.forEach(segment => {
+        let intersectionsOnSegment = intersections.filter(
+            intersection => intersection.line1 === segment || intersection.line2 === segment);
+
+        if (intersectionsOnSegment.length > 1){
+            intersectionsOnSegment.forEach(intersection => {
+                if (!connectedIntersections.includes(intersection)){
+                    connectedIntersections.push(intersection);
+                }
+            });
+            connectedSegments.push(segment);
+        }
+    });
+
+  connectedSegments.forEach(segment => {
+    let intersectionsOnSegment = connectedIntersections.filter(intersection => intersection.line1 === segment || intersection.line2 === segment);
+
+    //For each intersection on a line, find the nearest neighbor in each direction.  
+    //TODO:  Investigate if this works/when it fails/if there is a better way.
+    let nearestNeighborTrios = intersectionsOnSegment.map((intersection, index, intersections) => {
+      let nearestNeighborPair = [null, null];
+      let minimumDistancePair = [Infinity, Infinity];
+      let possibleNeighbors = intersections.filter(possibleNeighborIntersection => (intersection != possibleNeighborIntersection));
 
       possibleNeighbors.forEach(possibleNeighbor => {
-        if (possibleNeighbor !== intersection) {
-          
           let comparisonProperty = '';
           let distanceBetween = dist(intersection.point.x, intersection.point.y,
             possibleNeighbor.point.x, possibleNeighbor.point.y);
@@ -241,31 +171,27 @@ function buildGraph(segmentSet, intersectionSet) {
           }
 
           if (possibleNeighbor.point[comparisonProperty] < intersection.point[comparisonProperty]) {
-            if (nearestNeighbor1 == null || distanceBetween < minimumDistance1) {
-              nearestNeighbor1 = possibleNeighbor;
-              minimumDistance1 = distanceBetween;
+            if (nearestNeighborPair[0] == null || distanceBetween < minimumDistancePair[0]) {
+              nearestNeighborPair[0] = possibleNeighbor;
+              minimumDistancePair[0]  = distanceBetween;
             }
           } else if (possibleNeighbor.point[comparisonProperty] > intersection.point[comparisonProperty]){
-             if (nearestNeighbor2 == null || distanceBetween < minimumDistance2) {
-            nearestNeighbor2 = possibleNeighbor;
-            minimumDistance2 = distanceBetween;
-          }
+             if (nearestNeighborPair[1] == null || distanceBetween < minimumDistancePair[1]) {
+                nearestNeighborPair[1] = possibleNeighbor;
+            minimumDistancePair[1] = distanceBetween;
           }
         }
 
       });
 
-      if (nearestNeighbor1 === null) {
-        nearestNeighbor1 = intersection;
+      if (nearestNeighborPair[0] === null) {
+        nearestNeighborPair[0] = intersection;
       }
-      if (nearestNeighbor2 === null) {
-        nearestNeighbor2 = intersection;
+      if (nearestNeighborPair[1] === null) {
+        nearestNeighborPair[1] = intersection;
       }
-      
-      let slope1 = slopeBetween(intersection.point, nearestNeighbor1.point);
-      let slope2 = slopeBetween(intersection.point, nearestNeighbor2.point);
    
-      return [intersection, nearestNeighbor1, nearestNeighbor2];
+      return [intersection, nearestNeighborPair[0], nearestNeighborPair[1]];
     });
     
 
@@ -280,108 +206,13 @@ function buildGraph(segmentSet, intersectionSet) {
       nodes.forEach(node => {
         graph.addNode(node);
       });
+
       graph.addConnection(nodes[0], nodes[1]);
       graph.addConnection(nodes[0], nodes[2]);
     });
-    }
+    
   });
-  graph.checkForDuplicateNodesAndConnections();
+  graph.checkForDuplicateNodes();
+  graph.checkForDuplicateConnections();
   return graph;
-}
-
-function slopeBetween(point1, point2){
-  let rise = point1.y - point2.y;
-  let run = point1.x - point2.x;
-  if (run === 0){
-      return Infinity;
-  }
-  return (rise/run);
-}
-
-function findCycles(adjacencyList, source) {  
-  var neighbors = adjacencyList[source];
-  paths = [];
-  for (let i = 0; i < neighbors.length; i++){
-    path = [source];
-    let startingNeighbor = neighbors[i];
-    let tmpAdjacencyList = {...adjacencyList};
-    tmpAdjacencyList[startingNeighbor] = tmpAdjacencyList[startingNeighbor].filter(node => (node !== source));
-    path = path.concat(shortestPath(tmpAdjacencyList, startingNeighbor, source));
-    paths.push(path);
-  }
-  return paths;
-}
-
-function findAllCycles(adjacencyList){
-  let cycles = [];
-  for (let i = 0; i < adjacencyList.length; i++){
-    paths = findCycles(adjacencyList, i);
-    cycles = cycles.concat(paths);
-  }
-  
-  cycles = removeDuplicateCycles(cycles);
-  return cycles;
-}
-
-function containsSameElements(array1, array2){
-  if (array1.length !== array2.length){
-    return false;
-  }else {
-    for (let i = 0; i < array1.length; i++){
-      if (array2.includes(array1[i]) === false){
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-function removeDuplicateCycles(cycleList){
-  cyclesToRemove = [];
-  let uniqueCycles = [];
-  console.log("cycleList: ");
-  console.log(cycleList);
-  for (let i = 0; i < cycleList.length; i++){
-    if (uniqueCycles.filter(cycle => containsSameElements(cycle, cycleList[i])).length === 0){
-          uniqueCycles.push(cycleList[i]);
-    }
-  }
-  console.log("uniqueCycles:");
-  return uniqueCycles;
-}
-
-function shortestPath(adjacencyList, source, target) {
-  if (source == target) {   // Delete these four lines if
-    print(source);          // you want to look for a cycle
-    return;                 // when the source is equal to
-  }                         // the target.
-  var queue = [ source ],
-      visited = { source: true },
-      predecessor = {},
-      tail = 0;
-  while (tail < queue.length) {
-    var u = queue[tail++],  // Pop a vertex off the queue.
-        neighbors = adjacencyList[u];
-    for (var i = 0; i < neighbors.length; ++i) {
-      var v = neighbors[i];
-      if (visited[v]) {
-        continue;
-      }
-      visited[v] = true;
-      if (v === target) {   // Check if the path is complete.
-        var path = [ v ];   // If so, backtrack through the path.
-        while (u !== source) {
-          path.push(u);
-          u = predecessor[u];          
-        }
-        path.push(u);
-        path.reverse();
-      //  console.log(path);
-        return path;
-      }
-      predecessor[v] = u;
-      queue.push(v);
-    }
-  }
-  print('there is no path from ' + source + ' to ' + target);
 }
